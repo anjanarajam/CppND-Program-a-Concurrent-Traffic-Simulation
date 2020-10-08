@@ -118,7 +118,10 @@ int main()
     std::vector<std::shared_ptr<Intersection>> intersections;
     std::vector<std::shared_ptr<Vehicle>> vehicles;
     std::string backgroundImg;
-    int nVehicles = 6;
+
+    // Task L1.3 : Vary the number of simulated vehicles and use the top function on the terminal or 
+    // the task manager of your system to observe the number of threads used by the simulation.   
+    int nVehicles = 3;
     createTrafficObjects_Paris(streets, intersections, vehicles, backgroundImg, nVehicles);
 
     /* PART 2 : simulate traffic objects */
