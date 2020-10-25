@@ -5,16 +5,27 @@
 
 /* Implementation of class "MessageQueue" */
 
-/*
+
 template <typename T>
 T MessageQueue<T>::receive()
 {
     // FP.5a : The method receive should use std::unique_lock<std::mutex> and _condition.wait() 
     // to wait for and receive new messages and pull them from the queue using move semantics. 
     // The received object should then be returned by the receive function. 
-}
+    std::unique_lock<std::mutex> lck(_mutex);
+    //a Lambda to wait(), which repeatedly checks wether the queue contains elements. When wait() finishes, we are guaranteed to 
+    //find a new element in the queue this time. when wait state is entered, the mutex gets unlocked, so all the threads have access
+    //to the queue. Once out of wait condition, mutex gets locked again, no other thread is able to access the vector - 
+    //so there is no danger of a data race in this situation. As soon as we are out of scope, the lock will be automatically released.
+    _cond.wait(lck, [this] { return !_queue.empty(); });
 
-*/
+    // remove last element from queue
+    T msg = std::move(_queue.back());
+    _queue.pop_back();
+
+    // will not be copied due to return value optimization (RVO) in C++
+    return msg;
+}
 
 template <typename T>
 void MessageQueue<T>::send(T &&msg)
@@ -27,8 +38,10 @@ void MessageQueue<T>::send(T &&msg)
     //Push messages to the queue
     _queue.emplace_back(std::move(msg));
 
-    // notify client after pushing msg into queue
+    // notify client each time a msg is pushed into queue
     _cond.notify_one();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
 
 
@@ -58,7 +71,8 @@ TrafficLightPhase TrafficLight::getCurrentPhase()
 
 void TrafficLight::simulate()
 {
-    // FP.2b : Finally, the private method „cycleThroughPhases“ should be started in a thread when the public method „simulate“ is called. To do this, use the thread queue in the base class. 
+    // FP.2b : Finally, the private method „cycleThroughPhases“ should be started in a thread 
+    //when the public method „simulate“ is called. To do this, use the thread queue in the base class. 
     threads.emplace_back(std::thread(&TrafficLight::cycleThroughPhases, this));
  }
 
@@ -88,7 +102,8 @@ void TrafficLight::cycleThroughPhases()
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
         // Get the time difference between two loop cycles
-        timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
+        timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() 
+            - lastUpdate).count();
 
         // Check if time difference is greater than cycle duration
         if (timeSinceLastUpdate >= cycle_duration) {
@@ -101,9 +116,15 @@ void TrafficLight::cycleThroughPhases()
                 _currentPhase = green;
             }
 
-            //std::future<void> update_phase_ftr = std::async(std::launch::async, &MessageQueue<TrafficLightPhase>::send, _currentPhase);
+            /* Create a new object and dynamically allocate */
+            _msg_queue = std::make_shared<MessageQueue<TrafficLightPhase>>();
 
+            // Send message to the thread which is the current phase of the traffic light using async
+            std::future<void> update_phase_ftr = std::async(std::launch::async, &MessageQueue<TrafficLightPhase>::send, 
+                _msg_queue, std::move(_currentPhase));
 
+            // Future waits to recieve data 
+            update_phase_ftr.wait();
         }
 
         // Reset the last update variable at the end of the cycle 
