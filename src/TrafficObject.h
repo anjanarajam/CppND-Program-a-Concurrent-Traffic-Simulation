@@ -21,9 +21,13 @@ public:
     ~TrafficObject();
 
     // getter and setter
+    //Get the id of the traffic object
     int getID() { return _id; }
+    //set the position of the vehicle
     void setPosition(double x, double y);
+    // Get the position of the vehicle
     void getPosition(double &x, double &y);
+    // Get the type of traffic object : vehicle, intersections, street, traffic lights
     ObjectType getType() { return _type; }
 
     // typical behaviour methods

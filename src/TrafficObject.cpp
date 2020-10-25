@@ -29,6 +29,7 @@ TrafficObject::TrafficObject()
 TrafficObject::~TrafficObject()
 {
     // Task L1.1 : Set up a thread barrier that ensures that all the thread objects in the member vector _threads are joined.
+    // Join makes sure that all the threads are termonated before the main function exits
     for (auto& t : _threads) {
         t.join();
     }
