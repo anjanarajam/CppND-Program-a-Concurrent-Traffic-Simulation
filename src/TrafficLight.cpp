@@ -5,7 +5,6 @@
 
 /* Implementation of class "MessageQueue" */
 
-
 template <typename T>
 T MessageQueue<T>::receive()
 {
@@ -44,10 +43,7 @@ void MessageQueue<T>::send(T &&msg)
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
 
-
 /* Implementation of class "TrafficLight" */
-
-/* 
 TrafficLight::TrafficLight()
 {
     _currentPhase = TrafficLightPhase::red;
@@ -58,16 +54,24 @@ void TrafficLight::waitForGreen()
     // FP.5b : add the implementation of the method waitForGreen, in which an infinite while-loop 
     // runs and repeatedly calls the receive function on the message queue. 
     // Once it receives TrafficLightPhase::green, the method returns.
-}
 
-*/
+    while (true) {
+
+        /* Sleep at every iteration to reduce CPU usage */
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        TrafficLightPhase msg = _msg_queue->receive();
+
+        if (msg == green) {
+            return;
+        }
+    }
+}
 
 TrafficLightPhase TrafficLight::getCurrentPhase()
 {
     return _currentPhase;
 }
-
-
 
 void TrafficLight::simulate()
 {
@@ -115,9 +119,6 @@ void TrafficLight::cycleThroughPhases()
             else {
                 _currentPhase = green;
             }
-
-            /* Create a new object and dynamically allocate */
-            _msg_queue = std::make_shared<MessageQueue<TrafficLightPhase>>();
 
             // Send message to the thread which is the current phase of the traffic light using async
             std::future<void> update_phase_ftr = std::async(std::launch::async, &MessageQueue<TrafficLightPhase>::send, 
